@@ -1,0 +1,22 @@
+# 环境变量
+envs:
+  JAVA_HOME: hello {{ .this.Name }}-{{ .this.Type }}
+  PRINT_JAVA_HOME: "{{ .d }}"
+# 普通变量
+vars:
+  - test={{ .this | env "PRINT_JAVA_HOME" }}
+  - test2=Hello {{ .this | var "test" }}
+# 动态变量, 现支持HTTP、HTTPS格式的远程请求返回值当做变量
+dynamicVars:
+  proto:
+    type: https
+    url: https://tenapi.cn/resou/
+    responseParser: json
+    postResponseParser: |
+      {{- if eq (int .this.Data.Data.data) (int 200) -}}{{- .this.Return .this.Data.Data.list -}}{{- else -}}{{- .this.Error "错误的响应状态" -}}{{- end -}}
+templates:
+  "src/{{.v0.name}}.txt":
+    content: |
+      {{- printf "名称: %s\n热度: %.0f\nUrl: %s" .v0.name .v0.hot .v0.url -}}
+    range: |
+      ((.this | dynamicVarResponse "proto" ).Data)
