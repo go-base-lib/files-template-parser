@@ -85,8 +85,8 @@ func (p *Parser) parseProjectInfo(data interface{}) error {
 	//endregion
 
 	//region 解析动态变量
-	thisInfo.Type = ThisTypeDynamicVars
-	if err := p.parseOrderDynamicVarInfoMap(passData, thisInfo); err != nil {
+	thisInfo.Type = ThisTypeRemoteVars
+	if err := p.parseOrderRemoteVarInfoMap(passData, thisInfo); err != nil {
 		return err
 	}
 	//endregion
@@ -203,17 +203,17 @@ func (p *Parser) writeTemplateContentToTemplateFile(pathTemplate string, fileTem
 	return nil
 }
 
-// parseOrderDynamicVarInfoMap 解析动态变量
-func (p *Parser) parseOrderDynamicVarInfoMap(data map[string]interface{}, thisInfo *ThisInfo) (err error) {
-	dynamicVars := p.TemplateInfo.DynamicVars
-	keys := dynamicVars.Keys()
+// parseOrderRemoteVarInfoMap 解析动态变量
+func (p *Parser) parseOrderRemoteVarInfoMap(data map[string]interface{}, thisInfo *ThisInfo) (err error) {
+	remoteVars := p.TemplateInfo.RemoteVars
+	keys := remoteVars.Keys()
 	if len(keys) == 0 {
 		return
 	}
 
 	for _, k := range keys {
 		thisInfo.Name = k
-		val, _ := dynamicVars.Get(k)
+		val, _ := remoteVars.Get(k)
 		if err = val.Parse(data, thisInfo); err != nil {
 			return
 		}

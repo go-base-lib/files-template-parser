@@ -12,11 +12,10 @@ import (
 type ThisType string
 
 const (
-	ThisTypeEnvs             ThisType = "env"
-	ThisTypeVars             ThisType = "vars"
-	ThisTypeDynamicVars      ThisType = "dynamicVars"
-	ThisTypeTemplates        ThisType = "templates"
-	ThisTypeDynamicTemplates ThisType = "dynamicTemplates"
+	ThisTypeEnvs       ThisType = "env"
+	ThisTypeVars       ThisType = "vars"
+	ThisTypeRemoteVars ThisType = "remoteVars"
+	ThisTypeTemplates  ThisType = "templates"
 )
 
 type TemplateFileInfo struct {
@@ -76,12 +75,12 @@ func (t *ThisInfo) Var(name string) string {
 	return v
 }
 
-func (t *ThisInfo) DynamicVar(name string) *DynamicVarInfo {
-	v, b := t.templateData.DynamicVars.Get(name)
+func (t *ThisInfo) RemoteVar(name string) *RemoteVarInfo {
+	v, b := t.templateData.RemoteVars.Get(name)
 	if !b {
 		return nil
 	}
-	return v.DynamicVarInfo
+	return v.RemoteVarInfo
 }
 
 func (t *ThisInfo) addWriteData(d []byte) {
@@ -187,11 +186,11 @@ func (o *OrderFieldMap) Sort(lessFunc func(a *orderedmap.Pair, b *orderedmap.Pai
 	o.m.Sort(lessFunc)
 }
 
-type OrderDynamicVarInfoMap struct {
+type OrderRemoteVarInfoMap struct {
 	m *orderedmap.OrderedMap
 }
 
-func (o *OrderDynamicVarInfoMap) UnmarshalYAML(value *yaml.Node) error {
+func (o *OrderRemoteVarInfoMap) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
 		return errors.New(fmt.Sprintf("行: %d, 列: %d, 错误的数据类型", value.Line, value.Column))
 	}
@@ -210,7 +209,7 @@ func (o *OrderDynamicVarInfoMap) UnmarshalYAML(value *yaml.Node) error {
 			continue
 		}
 
-		var val *DynamicVarParser
+		var val *RemoteVarParser
 		if err := valContent.Decode(&val); err != nil {
 			return err
 		}
@@ -221,34 +220,34 @@ func (o *OrderDynamicVarInfoMap) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (o *OrderDynamicVarInfoMap) Get(key string) (*DynamicVarParser, bool) {
+func (o *OrderRemoteVarInfoMap) Get(key string) (*RemoteVarParser, bool) {
 	v, b := o.m.Get(key)
 	if !b || v == nil {
 		return nil, b
 	}
 
-	return v.(*DynamicVarParser), b
+	return v.(*RemoteVarParser), b
 }
 
-func (o *OrderDynamicVarInfoMap) Set(key string, info *DynamicVarParser) {
+func (o *OrderRemoteVarInfoMap) Set(key string, info *RemoteVarParser) {
 	o.m.Set(key, info)
 }
 
-func (o *OrderDynamicVarInfoMap) Delete(key string) {
+func (o *OrderRemoteVarInfoMap) Delete(key string) {
 	o.m.Delete(key)
 }
 
-func (o *OrderDynamicVarInfoMap) Keys() []string {
+func (o *OrderRemoteVarInfoMap) Keys() []string {
 	return o.m.Keys()
 }
 
 // SortKeys Sort the map keys using your sort func
-func (o *OrderDynamicVarInfoMap) SortKeys(sortFunc func(keys []string)) {
+func (o *OrderRemoteVarInfoMap) SortKeys(sortFunc func(keys []string)) {
 	o.m.SortKeys(sortFunc)
 }
 
 // Sort Sort the map using your sort func
-func (o *OrderDynamicVarInfoMap) Sort(lessFunc func(a *orderedmap.Pair, b *orderedmap.Pair) bool) {
+func (o *OrderRemoteVarInfoMap) Sort(lessFunc func(a *orderedmap.Pair, b *orderedmap.Pair) bool) {
 	o.m.Sort(lessFunc)
 }
 
@@ -272,8 +271,8 @@ type HttpUploadFileFormInfo struct {
 	Data *OrderFieldMap `yaml:"data,omitempty"`
 }
 
-// DynamicVarInfo 动态变量信息
-type DynamicVarInfo struct {
+// RemoteVarInfo 动态变量信息
+type RemoteVarInfo struct {
 	// Type 类型
 	Type SupportRemoteReqType `yaml:"type,omitempty"`
 	// Url 请求路径
@@ -304,18 +303,18 @@ type DynamicVarInfo struct {
 	Response *ResponseInfo `yaml:"-"`
 }
 
-type DynamicVarParser struct {
-	*DynamicVarInfo
+type RemoteVarParser struct {
+	*RemoteVarInfo
 	line   int
 	column int
 }
 
-func (d *DynamicVarParser) Parse(data map[string]interface{}, thisInfo *ThisInfo) (err error) {
+func (d *RemoteVarParser) Parse(data map[string]interface{}, thisInfo *ThisInfo) (err error) {
 	if d.Url == "" {
 		return errors.New(fmt.Sprintf("行: %d, 列: %d, 缺失url(请求路径)", d.line, d.column))
 	}
 
-	thisInfo.Data = d.DynamicVarInfo
+	thisInfo.Data = d.RemoteVarInfo
 
 	d.Url, _, err = getStrByTemplate(d.Url, data, thisInfo)
 	if err != nil {
@@ -333,7 +332,7 @@ func (d *DynamicVarParser) Parse(data map[string]interface{}, thisInfo *ThisInfo
 	case SupportRemoteReqTypeHttp:
 		fallthrough
 	case SupportRemoteReqTypeHttps:
-		if err := createHttpRequestByVar(d.DynamicVarInfo, data, thisInfo); err != nil {
+		if err := createHttpRequestByVar(d.RemoteVarInfo, data, thisInfo); err != nil {
 			return err
 		}
 	default:
@@ -342,14 +341,14 @@ func (d *DynamicVarParser) Parse(data map[string]interface{}, thisInfo *ThisInfo
 	return nil
 }
 
-func (d *DynamicVarParser) UnmarshalYAML(value *yaml.Node) error {
-	var r *DynamicVarInfo
+func (d *RemoteVarParser) UnmarshalYAML(value *yaml.Node) error {
+	var r *RemoteVarInfo
 	if err := value.Decode(&r); err != nil {
 		return err
 	}
 	d.line = value.Line
 	d.column = value.Column
-	d.DynamicVarInfo = r
+	d.RemoteVarInfo = r
 	return nil
 }
 
@@ -358,8 +357,8 @@ type ProjectTemplateInfo struct {
 	Envs *OrderFieldMap `yaml:"envs,omitempty"`
 	// Vars 变量
 	Vars *OrderFieldMap `yaml:"vars,omitempty"`
-	// DynamicVars 动态变量
-	DynamicVars *OrderDynamicVarInfoMap `yaml:"dynamicVars,omitempty"`
+	// RemoteVars 动态变量
+	RemoteVars *OrderRemoteVarInfoMap `yaml:"remoteVars,omitempty"`
 	// Templates 静态模板
 	Templates map[string]*TemplateFileInfo `yaml:"templates,omitempty"`
 }

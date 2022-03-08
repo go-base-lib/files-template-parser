@@ -64,17 +64,17 @@ var (
 	templateFnVar = func(varName string, thisInfo *ThisInfo) string {
 		return thisInfo.Var(varName)
 	}
-	// templateFnDynamicVar 解析动态参数
-	templateFnDynamicVar = func(varName string, thisInfo *ThisInfo) *DynamicVarInfo {
-		return thisInfo.DynamicVar(varName)
+	// templateFnRemoteVar 解析远程参数
+	templateFnRemoteVar = func(varName string, thisInfo *ThisInfo) *RemoteVarInfo {
+		return thisInfo.RemoteVar(varName)
 	}
-	// templateFnDynamicVarResponse 获取动态参数的响应
-	templateFnDynamicVarResponse = func(varName string, thisInfo *ThisInfo) *ResponseInfo {
-		dynamicVar := thisInfo.DynamicVar(varName)
-		if dynamicVar == nil {
+	// templateFnRemoteVarResponse 获取远程参数的响应
+	templateFnRemoteVarResponse = func(varName string, thisInfo *ThisInfo) *ResponseInfo {
+		remoteVar := thisInfo.RemoteVar(varName)
+		if remoteVar == nil {
 			return nil
 		}
-		return dynamicVar.Response
+		return remoteVar.Response
 	}
 	// templateFnWriteBytes 写入二进制
 	templateFnWriteBytes = func(d []byte, thisInfo *ThisInfo) string {
@@ -93,8 +93,8 @@ func init() {
 	funcMap["substrByFlag"] = templateFnSubstrByFlag
 	funcMap["env"] = templateFnEnv
 	funcMap["var"] = templateFnVar
-	funcMap["dynamicVar"] = templateFnDynamicVar
-	funcMap["dynamicVarResponse"] = templateFnDynamicVarResponse
+	funcMap["remoteVar"] = templateFnRemoteVar
+	funcMap["remoteVarResponse"] = templateFnRemoteVarResponse
 	funcMap["writeBytes"] = templateFnWriteBytes
 	funcMap["pathRange"] = templateFnPathRange
 	textTemplate = template.New("base").Funcs(funcMap)

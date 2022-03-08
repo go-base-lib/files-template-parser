@@ -7,7 +7,7 @@ vars:
   - test={{ .this | env "PRINT_JAVA_HOME" }}
   - test2=Hello {{ .this | var "test" }}
 # 动态变量, 现支持HTTP、HTTPS格式的远程请求返回值当做变量
-dynamicVars:
+remoteVars:
   proto:
     type: https
     url: https://tenapi.cn/resou/
@@ -19,4 +19,4 @@ templates:
     content: |
       {{- printf "名称: %s\n热度: %.0f\nUrl: %s" .v0.name .v0.hot .v0.url -}}
     range: |
-      ((.this | dynamicVarResponse "proto" ).Data)
+      ((.this | remoteVarResponse "proto" ).Data)

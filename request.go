@@ -25,7 +25,7 @@ type RequestInterface interface {
 }
 
 type httpRequest struct {
-	varInfo  *DynamicVarInfo
+	varInfo  *RemoteVarInfo
 	req      *http.Request
 	client   *http.Client
 	data     map[string]interface{}
@@ -104,7 +104,7 @@ func (h *httpRequest) Do() error {
 	return nil
 }
 
-func createHttpRequestByVar(varInfo *DynamicVarInfo, data map[string]interface{}, thisInfo *ThisInfo) error {
+func createHttpRequestByVar(varInfo *RemoteVarInfo, data map[string]interface{}, thisInfo *ThisInfo) error {
 	if !strings.HasPrefix(varInfo.Url, string(varInfo.Type)) {
 		varInfo.Url = fmt.Sprintf("%s://%s", varInfo.Type, varInfo.Url)
 	}
