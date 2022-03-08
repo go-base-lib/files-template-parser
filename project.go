@@ -55,7 +55,7 @@ type ProjectDependsContainerInfo struct {
 	// Current 当前依赖列表
 	Current *OrderProjectDependGroupMap `json:"current,omitempty"`
 	// Group 分组信息
-	Group *OrderProjectDependGroupMap `json:"group,omitempty"`
+	Group map[string]*OrderProjectDependGroupMap `json:"group,omitempty"`
 }
 
 type ProjectDependsGroupInfo struct {
