@@ -142,10 +142,11 @@ func (p *Parser) writeTemplateContentToTemplateFile(pathTemplate string, fileTem
 		return err
 	}
 
-	pr = p.WorkerPath + "/" + pr
+	//pr = p.WorkerPath + "/" + pr
 	prSplit := strings.Split(pr, "/")
 
 	filePath, _, err := getStrByTemplate(filepath.Join(prSplit...), data, thisInfo)
+	filePath = filepath.Join(p.WorkerPath, filePath)
 	if err != nil {
 		return err
 	}
