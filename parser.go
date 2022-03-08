@@ -32,23 +32,23 @@ func NewParser() (*Parser, error) {
 }
 
 // Decode 解析通过二进制
-func (p *Parser) Decode(content []byte, data interface{}) error {
-	return p.DecodeByReader(bytes.NewReader(content), data)
+func (p *Parser) Decode(content []byte, projectInfo *ProjectInfo) error {
+	return p.DecodeByReader(bytes.NewReader(content), projectInfo)
 }
 
 // DecodeByFilePath 解析通过文件路径
-func (p *Parser) DecodeByFilePath(filePath string, data interface{}) error {
+func (p *Parser) DecodeByFilePath(filePath string, projectInfo *ProjectInfo) error {
 	file, err := os.OpenFile(filePath, os.O_RDONLY, 0666)
 	if err != nil {
 		return errors.New("文件打开失败: " + err.Error())
 	}
 	defer file.Close()
 
-	return p.DecodeByReader(file, data)
+	return p.DecodeByReader(file, projectInfo)
 }
 
 // DecodeByReader 解析通过reader
-func (p *Parser) DecodeByReader(reader io.Reader, data interface{}) error {
+func (p *Parser) DecodeByReader(reader io.Reader, projectInfo *ProjectInfo) error {
 	decoder := yaml.NewDecoder(reader)
 
 	result := &ProjectTemplateInfo{}
@@ -58,16 +58,18 @@ func (p *Parser) DecodeByReader(reader io.Reader, data interface{}) error {
 
 	p.TemplateInfo = result
 
-	return p.parseProjectInfo(data)
+	return p.parseProjectInfo(projectInfo)
 }
 
 // parseProjectInfo 解析工程信息
-func (p *Parser) parseProjectInfo(data interface{}) error {
+func (p *Parser) parseProjectInfo(projectInfo *ProjectInfo) error {
+	projectInfo = settingProjectInfo(projectInfo)
 	thisInfo := &ThisInfo{
 		templateData: p.TemplateInfo,
+		projectInfo:  projectInfo,
 	}
 	passData := make(map[string]interface{})
-	passData["Project"] = data
+	passData["Project"] = projectInfo
 	passData["top"] = p.TemplateInfo
 	passData["this"] = thisInfo
 	//region 解析env

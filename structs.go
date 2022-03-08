@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/iancoleman/orderedmap"
 	"gopkg.in/yaml.v3"
-	"io"
 	"strings"
 )
 
@@ -24,87 +23,6 @@ type TemplateFileInfo struct {
 	Range   string `yaml:"range,omitempty"`
 }
 
-type ThisInfo struct {
-	// templateData 模板数据
-	templateData *ProjectTemplateInfo
-	// Type 类别
-	Type ThisType
-	// Name 名称
-	Name string
-	// Data 数据
-	Data interface{}
-	// writeFileList 写入文件列表
-	writeFileList [][]byte
-	// 路径循环条件
-	pathRange []interface{}
-	// err 错误
-	err error
-	// returnData 响应数据
-	returnData interface{}
-}
-
-func (t *ThisInfo) getReturnData() interface{} {
-	r := t.returnData
-	t.returnData = nil
-	return r
-}
-
-func (t *ThisInfo) Return(data interface{}) string {
-	t.returnData = data
-	return ""
-}
-
-func (t *ThisInfo) error() error {
-	err := t.err
-	t.err = nil
-	return err
-}
-
-func (t *ThisInfo) Error(errStr string) string {
-	t.err = errors.New(errStr)
-	return ""
-}
-
-func (t *ThisInfo) Env(name string) string {
-	v, _ := t.templateData.Envs.Get(name)
-	return v
-}
-
-func (t *ThisInfo) Var(name string) string {
-	v, _ := t.templateData.Vars.Get(name)
-	return v
-}
-
-func (t *ThisInfo) RemoteVar(name string) *RemoteVarInfo {
-	v, b := t.templateData.RemoteVars.Get(name)
-	if !b {
-		return nil
-	}
-	return v.RemoteVarInfo
-}
-
-func (t *ThisInfo) addWriteData(d []byte) {
-	if t.writeFileList == nil {
-		t.writeFileList = make([][]byte, 0, 8)
-	}
-	t.writeFileList = append(t.writeFileList, d)
-}
-
-func (t *ThisInfo) clearWriteData() {
-	if t.writeFileList != nil {
-		t.writeFileList = nil
-	}
-}
-
-func (t *ThisInfo) writeData(writer io.Writer) error {
-	if len(t.writeFileList) == 0 {
-		return nil
-	}
-
-	writer.Write(t.writeFileList[0])
-	t.writeFileList = t.writeFileList[1:]
-	return nil
-}
 
 type ResponseInfo struct {
 	ExitCode string
