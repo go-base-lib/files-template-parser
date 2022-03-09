@@ -155,9 +155,9 @@ func (p *Parser) writeTemplateContentToTemplateFile(pathTemplate string, fileTem
 		if err = os.MkdirAll(filePath, 0777); err != nil {
 			return errors.New(fmt.Sprintf("创建目录[%s]失败: %s", filePath, err.Error()))
 		}
-	} else {
-		_ = os.MkdirAll(filepath.Dir(filePath), 0777)
+		return nil
 	}
+	_ = os.MkdirAll(filepath.Dir(filePath), 0777)
 
 	cr, _, err := getBytesByTemplate(fileTemplateInfo.Content, data, thisInfo)
 	if err != nil {
