@@ -209,6 +209,9 @@ func (p *Parser) writeTemplateContentToTemplateFile(pathTemplate string, fileTem
 // parseOrderRemoteVarInfoMap 解析动态变量
 func (p *Parser) parseOrderRemoteVarInfoMap(data map[string]interface{}, thisInfo *ThisInfo) (err error) {
 	remoteVars := p.TemplateInfo.RemoteVars
+	if remoteVars == nil {
+		return nil
+	}
 	keys := remoteVars.Keys()
 	if len(keys) == 0 {
 		return
