@@ -2,6 +2,7 @@ package templateparser
 
 import (
 	"bytes"
+	"coder.byzk.cn/golibs/common/logs"
 	"errors"
 	"fmt"
 	"gopkg.in/yaml.v3"
@@ -73,6 +74,7 @@ func (p *Parser) parseProjectInfo(projectInfo *ProjectInfo) error {
 	passData["top"] = p.TemplateInfo
 	passData["this"] = thisInfo
 	//region 解析env
+	logs.Debugln("正在解析环境变量(envs)...")
 	thisInfo.Type = ThisTypeEnvs
 	if err := parseOrderFieldMap(p.TemplateInfo.Envs, passData, thisInfo, nil); err != nil {
 		return err
@@ -80,6 +82,7 @@ func (p *Parser) parseProjectInfo(projectInfo *ProjectInfo) error {
 	//endregion
 
 	//region 解析var
+	logs.Debugln("正在解析自定义变量(vars)...")
 	thisInfo.Type = ThisTypeVars
 	if err := parseOrderFieldMap(p.TemplateInfo.Vars, passData, thisInfo, nil); err != nil {
 		return err
@@ -87,6 +90,7 @@ func (p *Parser) parseProjectInfo(projectInfo *ProjectInfo) error {
 	//endregion
 
 	//region 解析动态变量
+	logs.Debugln("正在解析远程变量(remoteVars)...")
 	thisInfo.Type = ThisTypeRemoteVars
 	if err := p.parseOrderRemoteVarInfoMap(passData, thisInfo); err != nil {
 		return err
@@ -94,6 +98,7 @@ func (p *Parser) parseProjectInfo(projectInfo *ProjectInfo) error {
 	//endregion
 
 	//region 解析静态模板
+	logs.Debugln("正在解析模板(templates)...")
 	thisInfo.Type = ThisTypeTemplates
 	thisInfo.Name = "templates"
 	if err := p.parserTemplate(p.TemplateInfo.Templates, passData, thisInfo); err != nil {
@@ -245,6 +250,7 @@ func parseOrderFieldMap(fieldMap *OrderFieldMap, data map[string]interface{}, th
 		thisInfo.Data = fieldMap
 		v, _ := fieldMap.Get(k)
 		v, _, err = getStrByTemplate(v, data, thisInfo)
+		logs.Debugf("[%s]的解析结果为: %s\n", k, v)
 		if err != nil {
 			return
 		}
