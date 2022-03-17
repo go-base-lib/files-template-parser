@@ -44,10 +44,20 @@ type ProjectInfo struct {
 	Version *ProjectVersionInfo `json:"version,omitempty"`
 	// Depends 依赖信息
 	Depends *ProjectDependsContainerInfo `json:"depends,omitempty"`
+	// Modules 模块信息
+	Modules map[string]*ProjectModule `json:"modules,omitempty"`
 	// Name 模块名称
-	Name string
+	Name string `json:"name,omitempty"`
 	// Desc 模块描述
-	Desc string
+	Desc string `json:"desc,omitempty"`
+}
+
+// ProjectModule 工程模块信息
+type ProjectModule struct {
+	// Name 模块名称
+	Name string `json:"name,omitempty"`
+	// Desc 描述
+	Desc string `json:"desc,omitempty"`
 }
 
 // ProjectDependsContainerInfo 依赖外层包裹
@@ -132,6 +142,11 @@ func settingProjectInfo(p *ProjectInfo) *ProjectInfo {
 	if p.Depends.Group == nil {
 		p.Depends.Group = NewOrderProjectDependGroupMap()
 	}
+
+	if p.Modules == nil {
+		p.Modules = make(map[string]*ProjectModule, 0)
+	}
+
 	return p
 }
 

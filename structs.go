@@ -23,7 +23,6 @@ type TemplateFileInfo struct {
 	Range   string `yaml:"range,omitempty"`
 }
 
-
 type ResponseInfo struct {
 	ExitCode string
 	ExitMsg  string
@@ -279,4 +278,6 @@ type ProjectTemplateInfo struct {
 	RemoteVars *OrderRemoteVarInfoMap `yaml:"remoteVars,omitempty"`
 	// Templates 静态模板
 	Templates map[string]*TemplateFileInfo `yaml:"templates,omitempty"`
+	// Execute 执行器, 在模板创建完成之后执行
+	Execute []string `yaml:"execute,omitempty"`
 }
