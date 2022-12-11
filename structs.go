@@ -1,20 +1,26 @@
 package templateparser
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/iancoleman/orderedmap"
 	"gopkg.in/yaml.v3"
+	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 )
 
 type ThisType string
 
 const (
-	ThisTypeEnvs       ThisType = "env"
-	ThisTypeVars       ThisType = "vars"
-	ThisTypeRemoteVars ThisType = "remoteVars"
-	ThisTypeTemplates  ThisType = "templates"
+	ThisTypeEnvs        ThisType = "env"
+	ThisTypeVars        ThisType = "vars"
+	ThisTypeRemoteVars  ThisType = "remoteVars"
+	ThisTypeTemplates   ThisType = "templates"
+	ThisTypeExecutePre  ThisType = "executes-pre"
+	ThisTypeExecutePost ThisType = "executes-post"
 )
 
 type TemplateFileInfo struct {
@@ -315,15 +321,128 @@ func (d *RemoteVarParser) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+type ProjectComments struct {
+	Envs       map[string]string `yaml:"envs,omitempty"`
+	Vars       map[string]string `yaml:"vars,omitempty"`
+	RemoteVars map[string]string `yaml:"remoteVars,omitempty"`
+}
+
+var DefaultShellConfig = &ShellConfig{}
+
+func init() {
+	if runtime.GOOS == "windows" {
+		DefaultShellConfig.current = "cmd.exe /c"
+	} else {
+		DefaultShellConfig.current = "bash -c"
+	}
+}
+
+type ShellConfig struct {
+	current string `yaml:"current,omitempty"`
+}
+
+func (s *ShellConfig) Exec() {
+}
+
+func (s *ShellConfig) UnmarshalYAML(value *yaml.Node) error {
+	if value.Tag == "!!str" {
+		s.current = value.Value
+		return nil
+	}
+
+	if value.Kind != yaml.MappingNode {
+		return errors.New("不支持的shell配置类型")
+	}
+
+	currentGoos := "unix"
+	if runtime.GOOS == "windows" {
+		currentGoos = "windows"
+	}
+
+	contents := value.Content
+	for i := 0; i < len(contents); i += 2 {
+		k := contents[i]
+		if k.Tag != "!!str" {
+			continue
+		}
+
+		if strings.ToLower(k.Value) == currentGoos {
+			s.current = strings.TrimSpace(contents[i+1].Value)
+		}
+
+	}
+
+	if len(s.current) == 0 {
+		s.current = DefaultShellConfig.current
+	}
+
+	return nil
+}
+
 type ExecuteInfo struct {
 	Post []string `yaml:"post,omitempty"`
 	Pre  []string `yaml:"pre,omitempty"`
 }
 
-type ProjectComments struct {
-	Envs       map[string]string `yaml:"envs,omitempty"`
-	Vars       map[string]string `yaml:"vars,omitempty"`
-	RemoteVars map[string]string `yaml:"remoteVars,omitempty"`
+func (e *ExecuteInfo) ExecPre(p *Parser, shell string, data map[string]interface{}, thisInfo *ThisInfo) error {
+	return e.execCommands(e.Pre, p, shell, data, thisInfo)
+}
+
+func (e *ExecuteInfo) ExecPost(p *Parser, shell string, data map[string]interface{}, thisInfo *ThisInfo) error {
+	return e.execCommands(e.Post, p, shell, data, thisInfo)
+}
+
+func (e *ExecuteInfo) execCommands(commands []string, p *Parser, shell string, data map[string]interface{}, thisInfo *ThisInfo) error {
+	if len(commands) == 0 {
+		return nil
+	}
+
+	env := os.Environ()
+	if p.TemplateInfo.Envs != nil && p.TemplateInfo.Envs.m != nil {
+		for _, k := range p.TemplateInfo.Envs.Keys() {
+			v, ok := p.TemplateInfo.Envs.Get(k)
+			if !ok {
+				continue
+			}
+
+			if val, ok := v.(string); !ok {
+				continue
+			} else {
+				env = append(env, fmt.Sprintf("%s=%s", k, val))
+			}
+		}
+	}
+
+	var err error
+	for i := range commands {
+		command := commands[i]
+		if command, _, err = getStrByTemplate(command, data, thisInfo); err != nil {
+			return err
+		}
+
+		shellSplit := strings.Split(shell, " ")
+		shellScript := shellSplit[0]
+		cmdArgs := make([]string, 0)
+		if len(shellSplit) > 1 {
+			cmdArgs = append(cmdArgs, shellSplit[1:]...)
+			cmdArgs = append(cmdArgs, command)
+		}
+
+		marshal, _ := json.Marshal(env)
+		logCommand := strings.ReplaceAll(command, "\"", "\\\"")
+		p.LogWithPrevBlockName("\ncommand => %s \"%s\"\nenv=>%s\noutput=>", shell, logCommand, marshal)
+		cmd := exec.Command(shellScript, cmdArgs...)
+		cmd.Stdout = p.bufferWriter
+		cmd.Stderr = p.bufferWriter
+		cmd.Env = env
+		cmd.Dir = p.WorkerPath
+		if err = cmd.Run(); err != nil {
+			return err
+		}
+
+		_ = p.bufferWriter.Flush()
+	}
+	return nil
 }
 
 type ProjectTemplateInfo struct {
@@ -337,8 +456,10 @@ type ProjectTemplateInfo struct {
 	RemoteVars *OrderRemoteVarInfoMap `yaml:"remoteVars,omitempty"`
 	// Templates 静态模板
 	Templates map[string]*TemplateFileInfo `yaml:"templates,omitempty"`
-	// Execute 执行器, 在模板创建完成之后执行
-	Execute *ExecuteInfo `yaml:"execute,omitempty"`
 	// Comments 注释
 	Comments *ProjectComments `yaml:"comments,omitempty"`
+	// Executes 命令执行器
+	Executes *ExecuteInfo `yaml:"executes,omitempty"`
+	// Shell 当前shell环境, 默认 `bash -c`
+	Shell ShellConfig `yaml:"shell,omitempty"`
 }

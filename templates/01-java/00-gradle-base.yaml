@@ -1,3 +1,8 @@
+# vars: 变量
+# 可以自定义变量, 变量可以在此变量之后的变量、动态变量(remoteVars)、文件模板(templates)、执行器(execute)命令中进行调用与使用
+# 使用方式有两种:
+# 1. {{- .this.Var "变量名" -}}
+# 2. {{- (.this | var "变量名" ) -}}
 vars:
   group: "com.example"
   version: "0.0.1-SNAPSHOT"

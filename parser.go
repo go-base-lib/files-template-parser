@@ -107,6 +107,8 @@ func (p *Parser) ParseProjectTemplateInfoByReader(reader io.Reader) (*ProjectTem
 			}
 		}
 
+		importTemplateInfo.Shell = result.Shell
+		importTemplateInfo.Executes = result.Executes
 		p.mergeProjectTemplateInfo(importTemplateInfo, result)
 		return importTemplateInfo, nil
 	}
@@ -263,6 +265,25 @@ func (p *Parser) parseProjectInfo(projectInfo *ProjectInfo) error {
 	}
 	//endregion
 
+	shell := DefaultShellConfig.current
+	if p.TemplateInfo.Shell.current != "" {
+		shell = p.TemplateInfo.Shell.current
+	}
+
+	//region 全局pre命令执行器
+
+	if p.TemplateInfo.Executes != nil {
+		thisInfo.Type = ThisTypeExecutePre
+		thisInfo.Name = string(ThisTypeExecutePre)
+		p.SetLogBlockName("executes-pre")
+		if err := p.TemplateInfo.Executes.ExecPre(p, shell, passData, thisInfo); err != nil {
+			return err
+		}
+
+	}
+
+	//endregion
+
 	//region 解析静态模板
 	logs.Debugln("正在解析模板(templates)...")
 	thisInfo.Type = ThisTypeTemplates
@@ -271,6 +292,20 @@ func (p *Parser) parseProjectInfo(projectInfo *ProjectInfo) error {
 	if err := p.parserTemplate(p.TemplateInfo.Templates, passData, thisInfo); err != nil {
 		return err
 	}
+	//endregion
+
+	//region 全局Post命令执行器
+
+	if p.TemplateInfo.Executes != nil {
+		thisInfo.Type = ThisTypeExecutePost
+		thisInfo.Name = string(ThisTypeExecutePost)
+		p.SetLogBlockName("executes-post")
+		if err := p.TemplateInfo.Executes.ExecPost(p, shell, passData, thisInfo); err != nil {
+			return err
+		}
+
+	}
+
 	//endregion
 
 	return nil

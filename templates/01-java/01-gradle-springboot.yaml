@@ -1,6 +1,13 @@
 import:
   - "../00-gradle-base.yaml"
 
+#executes:
+#  pre:
+#    - ls
+#  post:
+#    - pwd
+#    - ls -la
+
 vars:
   jdkVersion: 1.8
   group: cn.bk.test
