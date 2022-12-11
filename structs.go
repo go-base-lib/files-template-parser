@@ -18,16 +18,26 @@ const (
 )
 
 type TemplateFileInfo struct {
+	// Path 文件路径
+	Path string `yaml:"path,omitempty"`
+	// Content 文件内容
 	Content string `yaml:"content,omitempty"`
-	IsDir   bool   `yaml:"isDir,omitempty"`
-	Range   string `yaml:"range,omitempty"`
+	// IsDir 是否为目录
+	IsDir bool `yaml:"isDir,omitempty"`
+	// Range 循环表达式
+	Range string `yaml:"range,omitempty"`
+	// Comment 注释
+	Comment string `yaml:"comment,omitempty"`
+	// Ignore 忽略
+	Ignore bool `yaml:"ignore,omitempty"`
 }
 
 type ResponseInfo struct {
-	ExitCode string
-	ExitMsg  string
-	Data     interface{}
-	Metadata interface{}
+	ExitCode            string
+	ExitMsg             string
+	ResponseRawFilePath string
+	Data                interface{}
+	Metadata            interface{}
 }
 
 type OrderFieldMap struct {
@@ -45,6 +55,31 @@ func (o *OrderFieldMap) UnmarshalYAML(value *yaml.Node) error {
 		for i := 0; i < contentLen; i += 2 {
 			key := value.Content[i]
 			val := value.Content[i+1]
+
+			//if val.Kind != key.Kind {
+			//	res := new(any)
+			//	if err := val.Decode(&res); err != nil {
+			//		panic(err)
+			//	}
+			//	r.Set(key.Value, res)
+			//	continue
+			//}
+			if val.Kind == yaml.SequenceNode {
+				values := make([]string, 0, len(value.Content))
+				for i := range val.Content {
+					v := val.Content[i]
+					if v.Kind != yaml.ScalarNode {
+						return fmt.Errorf("行%d: 不支持的数据类型", v.Line)
+					}
+					values = append(values, v.Value)
+				}
+				r.Set(key.Value, values)
+				continue
+			}
+
+			if val.Kind != yaml.ScalarNode {
+				return fmt.Errorf("行%d: 不支持的数据类型", val.Line)
+			}
 
 			r.Set(key.Value, val.Value)
 		}
@@ -72,16 +107,21 @@ func (o *OrderFieldMap) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (o *OrderFieldMap) Get(key string) (string, bool) {
+func (o *OrderFieldMap) Get(key string) (res any, ok bool) {
 	v, b := o.m.Get(key)
 	if !b || v == nil {
 		return "", b
 	}
 
-	return v.(string), b
+	if res, ok = v.(string); ok {
+		return
+	}
+
+	res, ok = v.([]string)
+	return
 }
 
-func (o *OrderFieldMap) Set(key string, info string) {
+func (o *OrderFieldMap) Set(key string, info any) {
 	o.m.Set(key, info)
 }
 
@@ -218,6 +258,8 @@ type RemoteVarInfo struct {
 	Req RequestInterface `yaml:"-"`
 	// Response 请求响应数据
 	Response *ResponseInfo `yaml:"-"`
+	// Name 变量名称
+	//Name string `yaml:"-"`
 }
 
 type RemoteVarParser struct {
@@ -226,19 +268,23 @@ type RemoteVarParser struct {
 	column int
 }
 
-func (d *RemoteVarParser) Parse(data map[string]interface{}, thisInfo *ThisInfo) (err error) {
+func (d *RemoteVarParser) Parse(data map[string]interface{}, thisInfo *ThisInfo, p *Parser) (err error) {
 	if d.Url == "" {
 		return errors.New(fmt.Sprintf("行: %d, 列: %d, 缺失url(请求路径)", d.line, d.column))
 	}
 
 	thisInfo.Data = d.RemoteVarInfo
 
+	if d.Type, _, err = getStrByTemplate(d.Type, data, thisInfo); err != nil {
+		return err
+	}
+
+	d.Type.ToLower()
+
 	d.Url, _, err = getStrByTemplate(d.Url, data, thisInfo)
 	if err != nil {
 		return
 	}
-
-	d.Type.ToLower()
 
 	d.Method = strings.ToUpper(d.Method)
 	if d.Method == "" {
@@ -249,7 +295,7 @@ func (d *RemoteVarParser) Parse(data map[string]interface{}, thisInfo *ThisInfo)
 	case SupportRemoteReqTypeHttp:
 		fallthrough
 	case SupportRemoteReqTypeHttps:
-		if err := createHttpRequestByVar(d.RemoteVarInfo, data, thisInfo); err != nil {
+		if err := createHttpRequestByVar(d.RemoteVarInfo, data, thisInfo, p); err != nil {
 			return err
 		}
 	default:
@@ -269,7 +315,20 @@ func (d *RemoteVarParser) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+type ExecuteInfo struct {
+	Post []string `yaml:"post,omitempty"`
+	Pre  []string `yaml:"pre,omitempty"`
+}
+
+type ProjectComments struct {
+	Envs       map[string]string `yaml:"envs,omitempty"`
+	Vars       map[string]string `yaml:"vars,omitempty"`
+	RemoteVars map[string]string `yaml:"remoteVars,omitempty"`
+}
+
 type ProjectTemplateInfo struct {
+	// Import 导入
+	Import []string `yaml:"import,omitempty"`
 	// Env 环境变量
 	Envs *OrderFieldMap `yaml:"envs,omitempty"`
 	// Vars 变量
@@ -279,5 +338,7 @@ type ProjectTemplateInfo struct {
 	// Templates 静态模板
 	Templates map[string]*TemplateFileInfo `yaml:"templates,omitempty"`
 	// Execute 执行器, 在模板创建完成之后执行
-	Execute []string `yaml:"execute,omitempty"`
+	Execute *ExecuteInfo `yaml:"execute,omitempty"`
+	// Comments 注释
+	Comments *ProjectComments `yaml:"comments,omitempty"`
 }

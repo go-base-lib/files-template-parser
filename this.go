@@ -24,6 +24,8 @@ type ThisInfo struct {
 	err error
 	// returnData 响应数据
 	returnData interface{}
+	// cacheDirPath 缓存目录
+	cacheDirPath string
 }
 
 // getReturnData 获取返回值
@@ -55,11 +57,15 @@ func (t *ThisInfo) Error(errStr string) string {
 // Env 获取环境变量
 func (t *ThisInfo) Env(name string) string {
 	v, _ := t.templateData.Envs.Get(name)
-	return v
+	str, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return str
 }
 
 // Var 获取变量
-func (t *ThisInfo) Var(name string) string {
+func (t *ThisInfo) Var(name string) any {
 	v, _ := t.templateData.Vars.Get(name)
 	return v
 }

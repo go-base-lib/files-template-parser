@@ -1,6 +1,8 @@
 package templateparser
 
-import "github.com/iancoleman/orderedmap"
+import (
+	"github.com/iancoleman/orderedmap"
+)
 
 type OrderProjectDependGroupMap struct {
 	m *orderedmap.OrderedMap

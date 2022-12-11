@@ -61,7 +61,7 @@ var (
 		return thisInfo.Env(envName)
 	}
 	// templateFnVar 获取变量
-	templateFnVar = func(varName string, thisInfo *ThisInfo) string {
+	templateFnVar = func(varName string, thisInfo *ThisInfo) any {
 		return thisInfo.Var(varName)
 	}
 	// templateFnRemoteVar 解析远程参数
@@ -100,8 +100,15 @@ func init() {
 	textTemplate = template.New("base").Funcs(funcMap)
 }
 
-func getStrByTemplate(str string, data map[string]interface{}, thisInfo *ThisInfo) (string, interface{}, error) {
-	parse, err := textTemplate.Parse(str)
+type AnyString interface{ ~string }
+
+func getStrByTemplate[K AnyString](str K, data map[string]interface{}, thisInfo *ThisInfo) (K, interface{}, error) {
+	_str := string(str)
+	_str = strings.TrimSpace(_str)
+	if len(_str) == 0 {
+		return str, nil, nil
+	}
+	parse, err := textTemplate.Parse(_str)
 	if err != nil {
 		return "", nil, err
 	}
@@ -113,10 +120,10 @@ func getStrByTemplate(str string, data map[string]interface{}, thisInfo *ThisInf
 
 	err = thisInfo.error()
 	if err != nil {
-		return buffer.String(), nil, err
+		return K(buffer.String()), nil, err
 	}
 
-	return buffer.String(), thisInfo.getReturnData(), err
+	return K(buffer.String()), thisInfo.getReturnData(), err
 }
 
 func getBytesByTemplate(str string, data map[string]interface{}, thisInfo *ThisInfo) ([]byte, interface{}, error) {

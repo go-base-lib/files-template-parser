@@ -1,0 +1,23 @@
+import:
+  - "../00-gradle-base.yaml"
+
+vars:
+  jdkVersion: 1.8
+  group: cn.bk.test
+  version: 0.0.0
+  dependencies: ""
+  custom:
+    - dfg
+    - 456
+    - 789
+
+templates:
+  src/java:
+    isDir: true
+  "gradlew":
+    ignore: true
+  "temp/{{.v0}}.txt":
+    content: |
+      {{- .v0 -}}
+    range: |
+      .this.Var "custom"
