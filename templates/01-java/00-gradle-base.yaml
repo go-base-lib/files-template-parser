@@ -36,8 +36,8 @@ vars:
     
     {{ .this.Var "buildGradleFileOtherContent" -}}
 
-  gradleWrapperJarUrlType: "http"
-  gradleWrapperJarUrl: localhost:9999/gradle-wrapper.jar
+  gradleWrapperJarUrlType: "https"
+  gradleWrapperJarUrl: https://github.com/go-base-lib/files-template-parser/raw/main/templates/resources/gradle-wrapper.jar
 remoteVars:
   gradleWrapperJarFile:
     type: '{{- .this.Var "gradleWrapperJarUrlType" -}}'
